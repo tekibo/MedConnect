@@ -29,9 +29,11 @@ type Filters = {
   searchText: string;
 };
 
+const ALL_SPECIALIZATIONS_VALUE = "all";
+
 export default function DoctorFilter({ onFilterChange, initialSymptoms = [] }: DoctorFilterProps) {
   const [filters, setFilters] = useState<Filters>({
-    specialization: '',
+    specialization: '', // Keep as '' to show placeholder initially
     availability: { liveChat: false, videoCall: false, bookFuture: false },
     languages: [],
     symptoms: initialSymptoms,
@@ -68,7 +70,7 @@ export default function DoctorFilter({ onFilterChange, initialSymptoms = [] }: D
 
   const resetFilters = () => {
     const newFilters = {
-      specialization: '',
+      specialization: '', // Reset to empty string to show placeholder
       availability: { liveChat: false, videoCall: false, bookFuture: false },
       languages: [],
       symptoms: initialSymptoms,
@@ -105,7 +107,7 @@ export default function DoctorFilter({ onFilterChange, initialSymptoms = [] }: D
                 <SelectValue placeholder="Any Specialization" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any Specialization</SelectItem>
+                <SelectItem value={ALL_SPECIALIZATIONS_VALUE}>Any Specialization</SelectItem>
                 {doctorSpecializations.map((spec: Specialization) => (
                   <SelectItem key={spec.id} value={spec.id}>{spec.name}</SelectItem>
                 ))}

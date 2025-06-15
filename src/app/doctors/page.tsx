@@ -10,6 +10,8 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+const ALL_SPECIALIZATIONS_VALUE = "all";
+
 export default function DoctorsPage() {
   const searchParams = useSearchParams();
   const initialSymptomsQuery = searchParams.get('symptoms');
@@ -23,7 +25,7 @@ export default function DoctorsPage() {
     return initialSymptomsQuery ? initialSymptomsQuery.split(',') : [];
   }, [initialSymptomsQuery]);
 
-  const [currentFilters, setCurrentFilters] = useState<any>({ symptoms: initialSymptoms });
+  const [currentFilters, setCurrentFilters] = useState<any>({ symptoms: initialSymptoms, specialization: '' });
 
   useEffect(() => {
     // Simulate API call and filtering
@@ -39,7 +41,8 @@ export default function DoctorsPage() {
       }
       
       // Filter by specialization
-      if (currentFilters.specialization) {
+      // Only filter if a specific specialization is selected (not 'all' and not empty string)
+      if (currentFilters.specialization && currentFilters.specialization !== ALL_SPECIALIZATIONS_VALUE && currentFilters.specialization !== '') {
         doctors = doctors.filter(doc => doc.specialization.id === currentFilters.specialization);
       }
 
