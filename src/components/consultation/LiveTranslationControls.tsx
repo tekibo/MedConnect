@@ -1,23 +1,39 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Languages, ArrowRightLeft, Volume2, Sparkles } from 'lucide-react';
+import { Loader2, Languages, ArrowRightLeft, Sparkles } from 'lucide-react';
 import { translateLive, type TranslateLiveInput } from '@/ai/flows/live-translation';
 import { supportedLanguages } from '@/lib/data';
 import type { Language } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
+// Define LanguageSelector OUTSIDE the main component function
+// This prevents it from being redefined on every render of LiveTranslationControls,
+// which can help with stability of the Select component (e.g., dropdown staying open).
+const LanguageSelector = ({ value, onChange, availableLanguages, placeholder }: { value: string, onChange: (value: string) => void, availableLanguages: Language[], placeholder: string }) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger className="w-full md:w-[180px]">
+      <SelectValue placeholder={placeholder} />
+    </SelectTrigger>
+    <SelectContent>
+      {availableLanguages.map(lang => (
+        <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+);
+
 type LiveTranslationControlsProps = {
   initialSourceLang?: string;
   initialTargetLang?: string;
-  medicalContext?: string; // E.g., selected symptoms, patient notes
+  medicalContext?: string;
 };
 
 export default function LiveTranslationControls({
@@ -33,22 +49,15 @@ export default function LiveTranslationControls({
   const [liveMode, setLiveMode] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (liveMode && textToTranslate.trim() && !isTranslating) {
-      const timer = setTimeout(() => {
-        handleTranslate();
-      }, 1000); // Auto-translate after 1 sec of inactivity in live mode
-      return () => clearTimeout(timer);
-    }
-  }, [textToTranslate, liveMode, isTranslating]);
-
-  const handleTranslate = async () => {
+  const handleTranslate = useCallback(async () => {
     if (!textToTranslate.trim()) {
-      setTranslatedText('');
+      // Do not clear translatedText here if textToTranslate is empty,
+      // let it hold the last valid translation or initial empty state.
       return;
     }
     setIsTranslating(true);
-    setTranslatedText(''); // Clear previous translation
+    // DO NOT clear translatedText here: setTranslatedText(''); 
+    // This was causing the blink.
     try {
       const input: TranslateLiveInput = {
         text: textToTranslate,
@@ -69,29 +78,25 @@ export default function LiveTranslationControls({
     } finally {
       setIsTranslating(false);
     }
-  };
+  }, [textToTranslate, sourceLang, targetLang, medicalContext, toast]);
+
+  useEffect(() => {
+    if (liveMode && textToTranslate.trim() && !isTranslating) {
+      const timer = setTimeout(() => {
+        handleTranslate();
+      }, 1000); 
+      return () => clearTimeout(timer);
+    }
+  }, [liveMode, textToTranslate, isTranslating, handleTranslate]);
 
   const swapLanguages = () => {
-    const temp = sourceLang;
+    const tempLang = sourceLang;
     setSourceLang(targetLang);
-    setTargetLang(temp);
-    // Optionally swap text and translation if it makes sense
-    // setTextToTranslate(translatedText);
-    // setTranslatedText(textToTranslate); // This might be confusing, perhaps just clear?
+    setTargetLang(tempLang);
+    // Optionally swap texts or clear translation
+    // setTextToTranslate(translatedText); 
+    // setTranslatedText(''); // Or textToTranslate, if desired
   };
-
-  const LanguageSelector = ({ value, onChange, availableLanguages, placeholder }: { value: string, onChange: (value: string) => void, availableLanguages: Language[], placeholder: string }) => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full md:w-[180px]">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {availableLanguages.map(lang => (
-          <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
 
   return (
     <Card className="w-full shadow-md">
@@ -125,9 +130,12 @@ export default function LiveTranslationControls({
             />
           </div>
           <div>
-            <Label htmlFor="translated-text" className="mb-1 block">
-              Translated Text ({supportedLanguages.find(l => l.code === targetLang)?.name})
-            </Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor="translated-text">
+                Translated Text ({supportedLanguages.find(l => l.code === targetLang)?.name})
+              </Label>
+              {isTranslating && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+            </div>
             <Textarea
               id="translated-text"
               placeholder="Translation will appear here..."
@@ -153,7 +161,7 @@ export default function LiveTranslationControls({
               {isTranslating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Volume2 className="mr-2 h-4 w-4" /> // Icon implies speech, more generic translate icon might be better
+                <Languages className="mr-2 h-4 w-4" /> 
               )}
               Translate
             </Button>
