@@ -1,5 +1,6 @@
+
 import type { Symptom, Specialization, Language, Doctor, Booking } from '@/types';
-import { Stethoscope, Baby, HeartPulse, Lung, Bone, Brain, Users, Languages as LanguagesIcon } from 'lucide-react';
+import { Stethoscope, Baby, HeartPulse, AirVent, Bone, Brain, Users, Languages as LanguagesIcon } from 'lucide-react';
 
 export const commonSymptoms: Symptom[] = [
   { id: 'fever', name: 'Fever' },
@@ -21,7 +22,7 @@ export const doctorSpecializations: Specialization[] = [
   { id: 'pediatrician', name: 'Pediatrician', icon: Baby },
   { id: 'dermatologist', name: 'Dermatologist', icon: Users }, // Placeholder icon
   { id: 'cardiologist', name: 'Cardiologist', icon: HeartPulse },
-  { id: 'pulmonologist', name: 'Pulmonologist', icon: Lung },
+  { id: 'pulmonologist', name: 'Pulmonologist', icon: AirVent },
   { id: 'gastroenterologist', name: 'Gastroenterologist', icon: Users }, // Placeholder
   { id: 'neurologist', name: 'Neurologist', icon: Brain },
   { id: 'orthopedic_surgeon', name: 'Orthopedic Surgeon', icon: Bone },
@@ -118,3 +119,4 @@ export const mockBookings: Booking[] = [
     consultationId: 'consult2',
   },
 ];
+
