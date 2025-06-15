@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import DoctorFilter from '@/components/doctors/DoctorFilter';
-import DoctorList from '@/components/doctors/DoctorList';
-import { mockDoctors } from '@/lib/data'; // Mock data
+import DoctorMap from '@/components/doctors/DoctorMap'; // Changed from DoctorList
+import { mockDoctors } from '@/lib/data'; 
 import type { Doctor } from '@/types';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,10 @@ export default function DoctorsPage() {
   const searchParams = useSearchParams();
   const initialSymptomsQuery = searchParams.get('symptoms');
   
-  const [allDoctors] = useState<Doctor[]>(mockDoctors); // In real app, fetch from API
+  const [allDoctors] = useState<Doctor[]>(mockDoctors); 
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Parse initial symptoms from URL query params
   const initialSymptoms = useMemo(() => {
     return initialSymptomsQuery ? initialSymptomsQuery.split(',') : [];
   }, [initialSymptomsQuery]);
@@ -28,37 +27,31 @@ export default function DoctorsPage() {
   const [currentFilters, setCurrentFilters] = useState<any>({ symptoms: initialSymptoms, specialization: '' });
 
   useEffect(() => {
-    // Simulate API call and filtering
     setIsLoading(true);
     const timeoutId = setTimeout(() => {
       let doctors = [...allDoctors];
 
-      // Filter by search text (doctor name)
       if (currentFilters.searchText) {
         doctors = doctors.filter(doc => 
           doc.name.toLowerCase().includes(currentFilters.searchText.toLowerCase())
         );
       }
       
-      // Filter by specialization
-      // Only filter if a specific specialization is selected (not 'all' and not empty string)
       if (currentFilters.specialization && currentFilters.specialization !== ALL_SPECIALIZATIONS_VALUE && currentFilters.specialization !== '') {
         doctors = doctors.filter(doc => doc.specialization.id === currentFilters.specialization);
       }
 
-      // Filter by availability
       if (currentFilters.availability) {
         const { liveChat, videoCall, bookFuture } = currentFilters.availability;
-        if (liveChat || videoCall || bookFuture) { // Only filter if any availability option is checked
+        if (liveChat || videoCall || bookFuture) { 
           doctors = doctors.filter(doc => 
             (liveChat && doc.availability.liveChat) ||
             (videoCall && doc.availability.videoCall) ||
-            (bookFuture && !!doc.availability.nextAvailableSlot) // Simple check for future booking
+            (bookFuture && !!doc.availability.nextAvailableSlot) 
           );
         }
       }
       
-      // Filter by languages
       if (currentFilters.languages && currentFilters.languages.length > 0) {
         doctors = doctors.filter(doc => 
           currentFilters.languages.every((langId: string) => 
@@ -67,12 +60,9 @@ export default function DoctorsPage() {
         );
       }
       
-      // Note: Filtering by symptoms is complex and would typically be backend logic.
-      // Here, we are just passing it through. The DoctorFilter has initialSymptoms.
-
       setFilteredDoctors(doctors);
       setIsLoading(false);
-    }, 500); // Simulate network delay
+    }, 500); 
 
     return () => clearTimeout(timeoutId);
   }, [allDoctors, currentFilters]);
@@ -90,7 +80,7 @@ export default function DoctorsPage() {
           <p className="font-semibold text-primary">
             Searching for doctors based on symptoms: <span className="font-normal text-foreground">{initialSymptoms.join(', ')}</span>.
           </p>
-          <p className="text-sm text-muted-foreground">Adjust filters below for more specific results.</p>
+          <p className="text-sm text-muted-foreground">Adjust filters or explore the map below.</p>
         </div>
       )}
 
@@ -100,12 +90,12 @@ export default function DoctorsPage() {
         </aside>
         <main className="lg:w-3/4 xl:w-4/5">
           {isLoading ? (
-            <div className="flex justify-center items-center min-h-[300px]">
+            <div className="flex flex-col justify-center items-center min-h-[400px] bg-muted/30 rounded-lg">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="ml-4 text-lg text-muted-foreground">Loading doctors...</p>
+              <p className="ml-4 text-lg text-muted-foreground mt-4">Loading doctors map...</p>
             </div>
           ) : (
-            <DoctorList doctors={filteredDoctors} />
+            <DoctorMap doctors={filteredDoctors} />
           )}
         </main>
       </div>
