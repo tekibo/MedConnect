@@ -26,7 +26,6 @@ export default function TranscriptionControls({
   onTranscriptReady,
 }: TranscriptionControlsProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [audioDataUrl, setAudioDataUrl] = useState<string | null>(null);
   const [transcriptOutput, setTranscriptOutput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -36,6 +35,7 @@ export default function TranscriptionControls({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]); // Use a ref to collect chunks
   const { toast } = useToast();
 
   const requestMicrophonePermission = useCallback(async () => {
@@ -72,31 +72,30 @@ export default function TranscriptionControls({
         title: "Permission Issue",
         description: "Microphone permission is required to record audio. Please grant permission first.",
       });
-      requestMicrophonePermission(); // Attempt to request again
+      requestMicrophonePermission();
       return;
     }
 
-    setAudioDataUrl(null); // Clear previous recording
-    setTranscriptOutput(''); // Clear previous transcript
-    setAudioChunks([]); // Reset chunks for new recording
+    setAudioDataUrl(null); 
+    setTranscriptOutput(''); 
+    audioChunksRef.current = []; // Clear chunks for the new recording
 
     const recorder = new MediaRecorder(streamRef.current);
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        setAudioChunks((prev) => [...prev, event.data]);
+        audioChunksRef.current.push(event.data); // Collect chunks in the ref
       }
     };
 
     recorder.onstop = () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' }); // Use chunks from ref
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       reader.onloadend = () => {
         setAudioDataUrl(reader.result as string);
       };
-      // audioChunks are already updated via setAudioChunks in ondataavailable
     };
 
     recorder.start();
@@ -131,7 +130,7 @@ export default function TranscriptionControls({
       };
       const result = await generateMedicalTranscript(input);
       setTranscriptOutput(result.transcript);
-      onTranscriptReady(result.transcript); // Pass transcript to parent
+      onTranscriptReady(result.transcript); 
       toast({
           title: "Transcription Successful",
           description: `Audio transcribed from ${sourceLanguageName} to ${targetLanguageName}.`,
@@ -242,3 +241,4 @@ export default function TranscriptionControls({
     </Card>
   );
 }
+
