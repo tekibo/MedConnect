@@ -14,9 +14,6 @@ import type { Language } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
-// Define LanguageSelector OUTSIDE the main component function
-// This prevents it from being redefined on every render of LiveTranslationControls,
-// which can help with stability of the Select component (e.g., dropdown staying open).
 const LanguageSelector = ({ value, onChange, availableLanguages, placeholder }: { value: string, onChange: (value: string) => void, availableLanguages: Language[], placeholder: string }) => (
   <Select value={value} onValueChange={onChange}>
     <SelectTrigger className="w-full md:w-[180px]">
@@ -34,14 +31,16 @@ type LiveTranslationControlsProps = {
   initialSourceLang?: string;
   initialTargetLang?: string;
   medicalContext?: string;
+  inputText?: string; // New prop to receive text from transcription
 };
 
 export default function LiveTranslationControls({
   initialSourceLang = 'en',
   initialTargetLang = 'hi',
   medicalContext = '',
+  inputText = '', // Default to empty string
 }: LiveTranslationControlsProps) {
-  const [textToTranslate, setTextToTranslate] = useState('');
+  const [textToTranslate, setTextToTranslate] = useState(inputText);
   const [translatedText, setTranslatedText] = useState('');
   const [sourceLang, setSourceLang] = useState(initialSourceLang);
   const [targetLang, setTargetLang] = useState(initialTargetLang);
@@ -49,15 +48,17 @@ export default function LiveTranslationControls({
   const [liveMode, setLiveMode] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (inputText) {
+      setTextToTranslate(inputText);
+    }
+  }, [inputText]);
+
   const handleTranslate = useCallback(async () => {
     if (!textToTranslate.trim()) {
-      // Do not clear translatedText here if textToTranslate is empty,
-      // let it hold the last valid translation or initial empty state.
       return;
     }
     setIsTranslating(true);
-    // DO NOT clear translatedText here: setTranslatedText(''); 
-    // This was causing the blink.
     try {
       const input: TranslateLiveInput = {
         text: textToTranslate,
@@ -84,7 +85,7 @@ export default function LiveTranslationControls({
     if (liveMode && textToTranslate.trim() && !isTranslating) {
       const timer = setTimeout(() => {
         handleTranslate();
-      }, 1000); 
+      }, 500); // Reduced delay for quicker live translation
       return () => clearTimeout(timer);
     }
   }, [liveMode, textToTranslate, isTranslating, handleTranslate]);
@@ -93,9 +94,11 @@ export default function LiveTranslationControls({
     const tempLang = sourceLang;
     setSourceLang(targetLang);
     setTargetLang(tempLang);
-    // Optionally swap texts or clear translation
+    // Optionally swap texts: if textToTranslate becomes translatedText and vice versa
+    // This might be useful if the user wants to translate back and forth.
+    // For now, we keep it simple: just swap language selections.
     // setTextToTranslate(translatedText); 
-    // setTranslatedText(''); // Or textToTranslate, if desired
+    // setTranslatedText(textToTranslate); // Or clear translatedText
   };
 
   return (
@@ -103,7 +106,7 @@ export default function LiveTranslationControls({
       <CardHeader className="pb-4">
         <CardTitle className="text-lg flex items-center">
           <Languages className="w-6 h-6 mr-2 text-primary" />
-          Live Translation
+          Live Text Translation
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -111,7 +114,7 @@ export default function LiveTranslationControls({
           <Switch id="live-mode-switch" checked={liveMode} onCheckedChange={setLiveMode} />
           <Label htmlFor="live-mode-switch" className="flex items-center">
             <Sparkles className={`w-4 h-4 mr-1.5 ${liveMode ? 'text-amber-500' : 'text-muted-foreground'}`} />
-            Live Mode {liveMode ? "(Auto-translates)" : "(Manual)"}
+            Live Mode {liveMode ? "(Auto-translates on text change)" : "(Manual)"}
           </Label>
         </div>
 
@@ -122,7 +125,7 @@ export default function LiveTranslationControls({
             </Label>
             <Textarea
               id="text-to-translate"
-              placeholder="Enter text here..."
+              placeholder="Enter text here, or record audio and transcribe..."
               value={textToTranslate}
               onChange={(e) => setTextToTranslate(e.target.value)}
               rows={4}
@@ -161,7 +164,7 @@ export default function LiveTranslationControls({
               {isTranslating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Languages className="mr-2 h-4 w-4" /> 
+                <Languages className="mr-2 h-4 w-4" />
               )}
               Translate
             </Button>
@@ -176,3 +179,4 @@ export default function LiveTranslationControls({
     </Card>
   );
 }
+

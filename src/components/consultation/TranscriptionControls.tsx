@@ -1,113 +1,150 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mic, Pause, FileText, Play, AlertTriangle } from 'lucide-react';
+import { Loader2, Mic, StopCircle, FileText, AlertTriangle, Settings2 } from 'lucide-react';
 import { generateMedicalTranscript, type MedicalTranscriptInput } from '@/ai/flows/medical-transcript';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { supportedLanguages } from '@/lib/data';
+import { Alert, AlertDescription as ShadAlertDescription, AlertTitle as ShadAlertTitle } from "@/components/ui/alert";
+
 
 type TranscriptionControlsProps = {
   initialSourceLang?: string;
   initialTargetLang?: string;
+  onTranscriptReady: (transcript: string) => void;
 };
 
-export default function TranscriptionControls({ 
-  initialSourceLang = 'en', 
-  initialTargetLang = 'hi' 
+export default function TranscriptionControls({
+  initialSourceLang = 'en',
+  initialTargetLang = 'hi',
+  onTranscriptReady,
 }: TranscriptionControlsProps) {
-  const [isRecording, setIsRecording] = useState(false); // Represents if the "simulated input process" is active
-  const [isPaused, setIsPaused] = useState(false);
-  const [transcript, setTranscript] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [audioDataUrl, setAudioDataUrl] = useState<string | null>(null);
+  const [transcriptOutput, setTranscriptOutput] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [simulatedAudioInput, setSimulatedAudioInput] = useState('');
   const [sourceLang, setSourceLang] = useState(initialSourceLang);
   const [targetLang, setTargetLang] = useState(initialTargetLang);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
-  const handleRecordToggle = () => {
-    if (isRecording) {
-      // Stopping/Finalizing simulated input process
-      // If not paused, could auto-transcribe, or just stop. Here we just stop.
-      setIsPaused(false); 
-      setIsRecording(false);
-      // The user would typically click "Transcribe" after this if they entered text while paused.
-    } else {
-      // Starting simulated input process
-      setIsRecording(true);
-      setIsPaused(false); // Ensure not paused when starting
-      setTranscript(''); // Clear previous transcript
-      setSimulatedAudioInput(''); // Clear previous simulated input
+  const requestMicrophonePermission = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      setHasPermission(true);
+      toast({
+        title: "Microphone Access Granted",
+        description: "You can now record audio.",
+      });
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setHasPermission(false);
+      toast({
+        variant: 'destructive',
+        title: 'Microphone Access Denied',
+        description: 'Please enable microphone permissions in your browser settings.',
+      });
     }
+  }, [toast]);
+
+  useEffect(() => {
+    // Clean up stream when component unmounts
+    return () => {
+      streamRef.current?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+
+  const handleStartRecording = () => {
+    if (!streamRef.current || !hasPermission) {
+      toast({
+        variant: "destructive",
+        title: "Permission Issue",
+        description: "Microphone permission is required to record audio. Please grant permission first.",
+      });
+      requestMicrophonePermission(); // Attempt to request again
+      return;
+    }
+
+    setAudioDataUrl(null); // Clear previous recording
+    setTranscriptOutput(''); // Clear previous transcript
+    setAudioChunks([]); // Reset chunks for new recording
+
+    const recorder = new MediaRecorder(streamRef.current);
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        setAudioChunks((prev) => [...prev, event.data]);
+      }
+    };
+
+    recorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm;codecs=opus' });
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = () => {
+        setAudioDataUrl(reader.result as string);
+      };
+      // audioChunks are already updated via setAudioChunks in ondataavailable
+    };
+
+    recorder.start();
+    setIsRecording(true);
   };
 
-  const handlePauseResume = () => {
-    if (!isRecording) return; // Can only pause/resume if "recording" (simulated input process) is active
-    setIsPaused(!isPaused);
-    // If resuming and there was text, user might continue typing or transcribe.
+  const handleStopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
   };
 
   const handleTranscribe = async () => {
-    if (!simulatedAudioInput.trim()) {
+    if (!audioDataUrl) {
       toast({
-        variant: "destructive",
-        title: "Input Missing",
-        description: "Please provide some text in the 'Simulated Spoken Words' area to transcribe.",
+        variant: 'destructive',
+        title: 'No Audio Recorded',
+        description: 'Please record audio before transcribing.',
       });
       return;
     }
 
     setIsTranscribing(true);
-    setTranscript('');
+    setTranscriptOutput('');
     try {
-      // This is a simulation. Genkit `media url` expects a real URL or actual data URI for audio.
-      // The `generateMedicalTranscript` flow is designed for audio.
-      // For this text-based simulation, we will use the `translateLive` flow as a workaround.
-      const audioDataUri_SIMULATED_TEXT_PLACEHOLDER = `data:text/plain;base64,${Buffer.from(simulatedAudioInput).toString('base64')}`;
-      
       const sourceLanguageName = supportedLanguages.find(l => l.code === sourceLang)?.name || 'English';
       const targetLanguageName = supportedLanguages.find(l => l.code === targetLang)?.name || 'Hindi';
-
-      toast({
-        title: "Simulation Notice",
-        description: `Transcribing simulated text from ${sourceLanguageName} to ${targetLanguageName}. Actual audio processing is not part of this demo.`,
-        variant: "default",
-        duration: 7000,
-      });
       
-      // Using translateLive for text-based "transcription" simulation
-       const { translateLive } = await import('@/ai/flows/live-translation');
-       const translationResult = await translateLive({
-         text: simulatedAudioInput,
-         sourceLanguage: sourceLanguageName,
-         targetLanguage: targetLanguageName,
-         medicalContext: "Patient consultation context (simulated transcription)" // Optional context
-       });
-       setTranscript(translationResult.translatedText);
-
-      // Original call to generateMedicalTranscript (would require actual audio data URI)
-      // const input: MedicalTranscriptInput = {
-      //   audioDataUri: audioDataUri_SIMULATED_TEXT_PLACEHOLDER, 
-      //   sourceLanguage: sourceLanguageName,
-      //   targetLanguage: targetLanguageName,
-      // };
-      // const result = await generateMedicalTranscript(input);
-      // setTranscript(result.transcript);
+      const input: MedicalTranscriptInput = {
+        audioDataUri: audioDataUrl,
+        sourceLanguage: sourceLanguageName,
+        targetLanguage: targetLanguageName,
+      };
+      const result = await generateMedicalTranscript(input);
+      setTranscriptOutput(result.transcript);
+      onTranscriptReady(result.transcript); // Pass transcript to parent
+      toast({
+          title: "Transcription Successful",
+          description: `Audio transcribed from ${sourceLanguageName} to ${targetLanguageName}.`,
+      });
 
     } catch (error) {
       console.error('Transcription error:', error);
       toast({
-        variant: "destructive",
-        title: "Transcription Failed",
-        description: "Could not transcribe the simulated input. Please try again.",
+        variant: 'destructive',
+        title: 'Transcription Failed',
+        description: 'Could not transcribe the audio. Please try again.',
       });
-      setTranscript('Error: Could not transcribe.');
+      setTranscriptOutput('Error: Could not transcribe.');
     } finally {
       setIsTranscribing(false);
     }
@@ -117,73 +154,90 @@ export default function TranscriptionControls({
     <Card className="w-full shadow-md">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg flex items-center">
-          <FileText className="w-6 h-6 mr-2 text-primary" />
-          Simulated Audio Transcription
+          <Mic className="w-6 h-6 mr-2 text-primary" />
+          Audio Transcription
         </CardTitle>
+        <CardDescription>
+          Record audio using your microphone, then transcribe and translate it.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Button onClick={handleRecordToggle} variant={isRecording ? "destructive" : "default"} className="w-1/2">
-            {isRecording ? <Pause className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-            {isRecording ? 'Stop Simulated Input' : 'Start Simulated Input'}
+        {hasPermission === null && (
+          <Button onClick={requestMicrophonePermission} className="w-full">
+            <Mic className="mr-2 h-4 w-4" />
+            Request Microphone Permission
           </Button>
-          <Button onClick={handlePauseResume} disabled={!isRecording} variant="outline" className="w-1/2">
-            {isPaused ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
-            {isPaused ? 'Resume Input' : 'Pause Input'}
-          </Button>
-        </div>
-        
-        {isRecording && isPaused && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-700 flex items-start">
-            <AlertTriangle className="w-5 h-5 mr-2 mt-0.5 shrink-0" />
-            <div>
-              <strong>Input Paused.</strong> Enter text below to simulate spoken words. This demo does not use a real microphone.
-            </div>
-          </div>
         )}
 
-        {(isRecording && isPaused) && (
-          <div className='space-y-2'>
-             <Label htmlFor="simulated-audio-input">Simulated Spoken Words (Type here)</Label>
-             <Textarea
-              id="simulated-audio-input"
-              placeholder="Enter text here to simulate what was last spoken..."
-              value={simulatedAudioInput}
-              onChange={(e) => setSimulatedAudioInput(e.target.value)}
-              rows={3}
-              className="resize-none"
-              disabled={!isPaused && isRecording} // Should be enabled only when paused
-            />
-            <div className="flex flex-col sm:flex-row gap-2 items-center">
-              <Select value={sourceLang} onValueChange={setSourceLang}>
-                <SelectTrigger><SelectValue placeholder="Source Language" /></SelectTrigger>
-                <SelectContent>{supportedLanguages.map(l => <SelectItem key={l.code} value={l.code}>{l.name}</SelectItem>)}</SelectContent>
-              </Select>
-              <Select value={targetLang} onValueChange={setTargetLang}>
-                <SelectTrigger><SelectValue placeholder="Target Language" /></SelectTrigger>
-                <SelectContent>{supportedLanguages.map(l => <SelectItem key={l.code} value={l.code}>{l.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleTranscribe} disabled={isTranscribing || !simulatedAudioInput.trim()} className="w-full">
+        {hasPermission === false && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <ShadAlertTitle>Microphone Access Denied</ShadAlertTitle>
+            <ShadAlertDescription>
+              Please enable microphone permissions in your browser settings to use audio recording.
+              <Button variant="link" onClick={requestMicrophonePermission} className="p-0 h-auto ml-1">Try requesting again</Button>
+            </ShadAlertDescription>
+          </Alert>
+        )}
+
+        {hasPermission === true && (
+          <div className="flex items-center space-x-2">
+            {!isRecording ? (
+              <Button onClick={handleStartRecording} className="w-1/2" disabled={isTranscribing}>
+                <Mic className="mr-2 h-4 w-4" /> Start Recording
+              </Button>
+            ) : (
+              <Button onClick={handleStopRecording} variant="destructive" className="w-1/2" disabled={isTranscribing}>
+                <StopCircle className="mr-2 h-4 w-4" /> Stop Recording
+              </Button>
+            )}
+            <Button onClick={handleTranscribe} disabled={!audioDataUrl || isTranscribing || isRecording} className="w-1/2">
               {isTranscribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-              Transcribe Simulated Input
+              Transcribe Recording
             </Button>
           </div>
         )}
+        
+        {isRecording && (
+           <div className="flex items-center justify-center text-sm text-destructive animate-pulse p-2 bg-destructive/10 rounded-md">
+            <Mic className="w-4 h-4 mr-2" /> Recording in progress...
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label className="flex items-center"><Settings2 className="w-4 h-4 mr-1.5 text-muted-foreground"/>Transcription Language Settings</Label>
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
+              <Select value={sourceLang} onValueChange={setSourceLang} disabled={isRecording || isTranscribing}>
+                <SelectTrigger><SelectValue placeholder="Source Language (Audio)" /></SelectTrigger>
+                <SelectContent>{supportedLanguages.map(l => <SelectItem key={l.code} value={l.code}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Select value={targetLang} onValueChange={setTargetLang} disabled={isRecording || isTranscribing}>
+                <SelectTrigger><SelectValue placeholder="Target Language (Transcript)" /></SelectTrigger>
+                <SelectContent>{supportedLanguages.map(l => <SelectItem key={l.code} value={l.code}>{l.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+        </div>
 
         <div>
           <Label htmlFor="transcript-output">Transcript</Label>
           <Textarea
             id="transcript-output"
-            placeholder="Transcription of simulated input will appear here..."
-            value={transcript}
+            placeholder="Transcription will appear here..."
+            value={transcriptOutput}
             readOnly
             rows={5}
             className="bg-secondary/30 resize-none"
             aria-live="polite"
           />
         </div>
-        <p className="text-xs text-muted-foreground italic">Note: This component simulates audio transcription using text input. Actual microphone input and audio processing are not implemented in this demo.</p>
+         {audioDataUrl && !isRecording && (
+            <div className="text-xs text-muted-foreground">
+                <audio controls src={audioDataUrl} className="w-full">
+                    Your browser does not support the audio element.
+                </audio>
+                Audio recorded. Ready to transcribe.
+            </div>
+        )}
       </CardContent>
     </Card>
   );

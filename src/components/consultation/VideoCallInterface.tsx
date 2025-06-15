@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, Send, Maximize, Minimize, UserCircle } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, Send, Maximize, Minimize } from 'lucide-react';
 import Image from 'next/image';
 
 type ChatMessage = {
@@ -23,7 +22,7 @@ type VideoCallInterfaceProps = {
   consultationId: string;
   doctorName: string;
   patientName: string;
-  initialSymptoms?: string; // Passed as medical context
+  initialSymptoms?: string; 
 };
 
 export default function VideoCallInterface({ consultationId, doctorName, patientName, initialSymptoms }: VideoCallInterfaceProps) {
@@ -31,15 +30,16 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [mainVideoFeed, setMainVideoFeed] = useState<'doctor' | 'patient'>('doctor'); // Who is in the large view
+  const [mainVideoFeed, setMainVideoFeed] = useState<'doctor' | 'patient'>('doctor');
+  const [textForLiveTranslation, setTextForLiveTranslation] = useState('');
 
-  // Hydration-safe time display
+
   const [currentTime, setCurrentTime] = useState('');
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString());
     }, 1000);
-    setCurrentTime(new Date().toLocaleTimeString()); // Initial set
+    setCurrentTime(new Date().toLocaleTimeString()); 
     return () => clearInterval(timer);
   }, []);
 
@@ -50,7 +50,7 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
         { id: Date.now().toString(), sender: 'patient', text: newMessage, timestamp: new Date().toLocaleTimeString() }
       ]);
       setNewMessage('');
-      // Simulate doctor's reply with translation need
+      
       setTimeout(() => {
         setChatMessages(prev => [
           ...prev,
@@ -60,19 +60,19 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
     }
   };
 
-  // Placeholder for ending call
   const handleEndCall = () => {
     alert('Call Ended (Simulated)');
-    // router.push('/dashboard'); or some other page
   };
 
   const medicalContextString = initialSymptoms ? `Patient reported symptoms: ${initialSymptoms}.` : "General medical consultation.";
 
+  const handleTranscriptReady = (transcript: string) => {
+    setTextForLiveTranslation(transcript);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] max-h-screen bg-background overflow-hidden">
-      {/* Main Content Area (Video Feeds and AI Tools) */}
       <div className="flex-grow flex flex-col p-4 space-y-4 overflow-y-auto">
-        {/* Video Feeds Area */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-shrink-0">
           <Card className={`relative aspect-video overflow-hidden shadow-lg ${mainVideoFeed === 'doctor' ? 'md:col-span-2' : ''}`}>
             <Image src="https://placehold.co/600x338.png" alt="Doctor Video Feed" layout="fill" objectFit="cover" data-ai-hint="doctor video" />
@@ -90,7 +90,6 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
           </Card>
         </div>
 
-        {/* Call Controls */}
         <Card className="shadow-md">
           <CardContent className="p-3 flex justify-center items-center space-x-2 sm:space-x-3">
             <Button variant="outline" size="icon" onClick={() => setIsMicMuted(!isMicMuted)} aria-label={isMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}>
@@ -106,19 +105,22 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
           </CardContent>
         </Card>
 
-        {/* AI Tools Area (Tabs or Accordion could be used here) */}
         <div className="space-y-4">
-          <LiveTranslationControls medicalContext={medicalContextString} />
-          <TranscriptionControls />
+          <TranscriptionControls 
+            onTranscriptReady={handleTranscriptReady} 
+          />
+          <LiveTranslationControls 
+            medicalContext={medicalContextString} 
+            inputText={textForLiveTranslation} 
+          />
         </div>
       </div>
 
-      {/* Sidebar (Chat) */}
       <aside className="w-full lg:w-96 bg-secondary/30 border-l flex flex-col p-4 max-h-full lg:max-h-screen">
         <CardHeader className="p-0 pb-4">
           <CardTitle className="text-xl">Consultation Chat</CardTitle>
         </CardHeader>
-        <ScrollArea className="flex-grow mb-4 pr-2 -mr-2"> {/* Negative margin for scrollbar */}
+        <ScrollArea className="flex-grow mb-4 pr-2 -mr-2">
           <div className="space-y-4">
             {chatMessages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.sender === 'patient' ? 'justify-end' : 'justify-start'}`}>
@@ -153,3 +155,4 @@ export default function VideoCallInterface({ consultationId, doctorName, patient
     </div>
   );
 }
+
