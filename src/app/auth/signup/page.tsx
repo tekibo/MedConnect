@@ -38,7 +38,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <UserPlus className="mx-auto h-16 w-16 text-primary mb-4" />
           <CardTitle className="text-3xl">Create Your Account</CardTitle>
-          <CardDescription>Join SwasthyaSetu to connect with healthcare providers.</CardDescription>
+          <CardDescription>Join MedConnect to connect with healthcare providers.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-6">

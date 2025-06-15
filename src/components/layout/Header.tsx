@@ -65,7 +65,7 @@ export default function Header() {
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <MessageCircle className="h-8 w-8 text-primary" />
-          <span className="font-headline text-2xl font-bold text-primary">SwasthyaSetu</span>
+          <span className="font-headline text-2xl font-bold text-primary">MedConnect</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">

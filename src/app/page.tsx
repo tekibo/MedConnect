@@ -45,7 +45,7 @@ export default function HomePage() {
       <section className="w-full py-20 md:py-32 bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="container mx-auto px-4 md:px-6 text-center">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-            Welcome to <span className="text-primary">SwasthyaSetu</span>
+            Welcome to <span className="text-primary">MedConnect</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
             Your bridge to accessible healthcare. Connect with doctors, get live translations, and manage your health journey seamlessly.
@@ -75,7 +75,7 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="w-full py-16 md:py-24">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">Why Choose SwasthyaSetu?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">Why Choose MedConnect?</h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
             We provide a comprehensive, AI-enhanced platform designed for your healthcare needs.
           </p>
@@ -124,7 +124,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 md:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Take Control of Your Health?</h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-            Join SwasthyaSetu today and experience a new era of healthcare.
+            Join MedConnect today and experience a new era of healthcare.
           </p>
           <Button size="lg" asChild className="shadow-lg hover:shadow-primary/30 transition-shadow">
             <Link href="/auth/signup">Sign Up for Free</Link>

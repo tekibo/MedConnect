@@ -32,7 +32,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <ShieldQuestion className="mx-auto h-16 w-16 text-primary mb-4" />
           <CardTitle className="text-3xl">Welcome Back!</CardTitle>
-          <CardDescription>Log in to access your SwasthyaSetu account.</CardDescription>
+          <CardDescription>Log in to access your MedConnect account.</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-6">

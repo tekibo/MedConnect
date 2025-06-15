@@ -5,7 +5,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'SwasthyaSetu - Your Health Bridge',
+  title: 'MedConnect - Your Health Bridge',
   description: 'Book doctor consultations with live translation and AI-powered medical insights.',
 };
 
