@@ -29,12 +29,12 @@ export default function DoctorMap({ doctors }: DoctorMapProps) {
       doctors.map((_, index) => {
         // Simple pseudo-random but deterministic placement within bounds for demo
         // Add a small offset based on index to reduce overlaps for few doctors
-        const xOffset = (index * 10) % (MAP_WIDTH - 2 * EDGE_PADDING - PIN_SIZE);
-        const yOffset = (index * 15) % (MAP_HEIGHT - 2 * EDGE_PADDING - PIN_SIZE);
+        const xOffset = (index * 30) % (MAP_WIDTH - 2 * EDGE_PADDING - PIN_SIZE); // Increased offset slightly for better spread
+        const yOffset = (index * 45) % (MAP_HEIGHT - 2 * EDGE_PADDING - PIN_SIZE); // Increased offset slightly
 
         return {
-          x: (Math.random() * 0.5 + 0.25) * (MAP_WIDTH - 2 * EDGE_PADDING - PIN_SIZE) + EDGE_PADDING + xOffset/3,
-          y: (Math.random() * 0.5 + 0.25) * (MAP_HEIGHT - 2 * EDGE_PADDING - PIN_SIZE) + EDGE_PADDING + yOffset/3,
+          x: (Math.random() * 0.6 + 0.2) * (MAP_WIDTH - 2 * EDGE_PADDING - PIN_SIZE) + EDGE_PADDING + xOffset * 0.3, // Adjusted random range and offset impact
+          y: (Math.random() * 0.6 + 0.2) * (MAP_HEIGHT - 2 * EDGE_PADDING - PIN_SIZE) + EDGE_PADDING + yOffset * 0.3, // Adjusted random range and offset impact
         };
       })
     );
@@ -57,11 +57,11 @@ export default function DoctorMap({ doctors }: DoctorMapProps) {
     >
       <Image
         src={`https://placehold.co/${MAP_WIDTH}x${MAP_HEIGHT}.png`}
-        alt="Map of doctors"
+        alt="Map of doctors in a city"
         width={MAP_WIDTH}
         height={MAP_HEIGHT}
         className="object-cover"
-        data-ai-hint="city street map"
+        data-ai-hint="city street map" // This hint guides image selection for a realistic map background
         priority
       />
       {doctors.map((doctor, index) => 
@@ -71,8 +71,8 @@ export default function DoctorMap({ doctors }: DoctorMapProps) {
             <button
               className="absolute flex items-center justify-center bg-primary text-primary-foreground rounded-full shadow-xl hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-all"
               style={{
-                top: `${Math.min(doctorPositions[index].y, MAP_HEIGHT - PIN_SIZE - EDGE_PADDING)}px`,
-                left: `${Math.min(doctorPositions[index].x, MAP_WIDTH - PIN_SIZE - EDGE_PADDING)}px`,
+                top: `${Math.max(EDGE_PADDING, Math.min(doctorPositions[index].y, MAP_HEIGHT - PIN_SIZE - EDGE_PADDING))}px`, // Ensure pins don't go off edge
+                left: `${Math.max(EDGE_PADDING, Math.min(doctorPositions[index].x, MAP_WIDTH - PIN_SIZE - EDGE_PADDING))}px`, // Ensure pins don't go off edge
                 width: `${PIN_SIZE}px`,
                 height: `${PIN_SIZE}px`,
               }}
@@ -88,7 +88,7 @@ export default function DoctorMap({ doctors }: DoctorMapProps) {
                 alt={doctor.name} 
                 width={48} 
                 height={48} 
-                className="rounded-full border-2 border-primary"
+                className="rounded-full border-2 border-primary object-cover"
                 data-ai-hint="doctor portrait"
               />
               <div>
